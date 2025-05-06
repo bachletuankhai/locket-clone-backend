@@ -8,8 +8,9 @@ import (
 
 func (rp *UserRepo) AddUser(user adding.UserRecord) error {
 	userRecord := User{
-		gorm.Model{},
-		user,
+		Model:      gorm.Model{},
+		UserRecord: user,
+		Friends:    []User{},
 	}
 	result := rp.db.Create(&userRecord)
 	if result.Error != nil {

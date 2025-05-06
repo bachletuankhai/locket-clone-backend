@@ -27,4 +27,5 @@ type UserRepo struct {
 type User struct {
 	gorm.Model
 	adding.UserRecord
+	Friends []User `gorm:"foreignkey:UserID"`
 }
