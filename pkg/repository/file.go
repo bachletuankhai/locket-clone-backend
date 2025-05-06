@@ -9,7 +9,6 @@ import (
 )
 
 type BlobStorage struct {
-	BaseLocation string
 }
 
 func (storage *BlobStorage) UploadFile(file []byte, contentType string) (string, error) {

@@ -10,10 +10,10 @@ type UserPayload struct {
 }
 
 type UserRecord struct {
-	Name         string `json:"name"`
-	Email        string `json:"email"`
+	Name         string `json:"name" gorm:"not null;default:null"`
+	Email        string `json:"email" gorm:"uniqueIndex;not null;default:null"`
 	PasswordHash string `json:"-"`
-	Username string `json:"username"`
+	Username     string `json:"username" gorm:"uniqueIndex;not null;default:null"`
 }
 
 type UserRepo interface {
@@ -31,12 +31,12 @@ type service struct {
 func (s *service) AddUser(user UserPayload) error {
 
 	passwordHash, err := auth.HashPassword(user.Password)
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 	return s.repo.AddUser(UserRecord{
-		Name: user.Name,
-		Email: user.Email,
+		Name:         user.Name,
+		Email:        user.Email,
 		PasswordHash: passwordHash,
 	})
 }

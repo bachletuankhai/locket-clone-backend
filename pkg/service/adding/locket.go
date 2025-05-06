@@ -1,21 +1,19 @@
 package adding
 
-type LocketType string
-
-var validLocketTypes = [3]LocketType{"image/jpeg", "image/png", "video/mp4"}
+import "locket-clone/backend/pkg/model"
 
 type LocketPayload struct {
-	Type     LocketType `json:"type"`
-	Image    []byte     `json:"-"`
-	Caption  string     `json:"caption"`
-	Username string     `json:"username"`
+	Type     model.LocketType `json:"type"`
+	Image    []byte           `json:"-"`
+	Caption  string           `json:"caption"`
+	Username string           `json:"username"`
 }
 
 type LocketRecord struct {
-	Type     LocketType `json:"type"`
-	ImageUrl string     `json:"imageUrl"`
-	Caption  string     `json:"caption"`
-	Username string     `json:"username"`
+	Type     model.LocketType `json:"type"`
+	ImageUrl string           `json:"imageUrl"`
+	Caption  string           `json:"caption"`
+	Username string           `json:"username"`
 }
 
 type InvalidPayloadError struct {
@@ -44,7 +42,7 @@ type locketService struct {
 }
 
 func (l *LocketPayload) Validate() error {
-	for _, locketType := range validLocketTypes {
+	for _, locketType := range model.ValidLocketTypes {
 		if locketType == l.Type {
 			return nil
 		}
