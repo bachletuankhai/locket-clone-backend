@@ -8,14 +8,14 @@ type Locket struct {
 
 type LocketRepo interface {
 	GetLocket(uint) (Locket, error)
-	ListUserLockets(uint) ([]Locket, error)
-	ListUserLocketsByUsername(string) ([]Locket, error)
+	ListUserLockets(uint, uint, uint) ([]Locket, error)
+	ListUserLocketsByUsername(string, uint, uint) ([]Locket, error)
 }
 
 type LocketService interface {
 	GetLocket(uint) (Locket, error)
-	ListUserLocketsByUsername(string) ([]Locket, error)
-	ListUserLockets(uint) ([]Locket, error)
+	ListUserLocketsByUsername(username string, offset uint, limit uint) ([]Locket, error)
+	ListUserLockets(userId uint, offset uint, limit uint) ([]Locket, error)
 }
 
 type locketService struct {
@@ -26,12 +26,12 @@ func (s *locketService) GetLocket(id uint) (Locket, error) {
 	return s.rp.GetLocket(id)
 }
 
-func (s *locketService) ListUserLocketsByUsername(username string) ([]Locket, error) {
-	return s.rp.ListUserLocketsByUsername(username)
+func (s *locketService) ListUserLocketsByUsername(username string, offset uint, limit uint) ([]Locket, error) {
+	return s.rp.ListUserLocketsByUsername(username, offset, limit)
 }
 
-func (s *locketService) ListUserLockets(id uint) ([]Locket, error) {
-	return s.rp.ListUserLockets(id)
+func (s *locketService) ListUserLockets(id uint, offset uint, limit uint) ([]Locket, error) {
+	return s.rp.ListUserLockets(id, offset, limit)
 }
 
 func NewLocketService(rp LocketRepo) LocketService {
