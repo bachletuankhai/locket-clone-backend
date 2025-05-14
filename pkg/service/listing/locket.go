@@ -1,6 +1,9 @@
 package listing
 
-import "locket-clone/backend/pkg/model"
+import (
+	"locket-clone/backend/pkg/model"
+	"time"
+)
 
 type Locket struct {
 	model.Locket
@@ -8,30 +11,37 @@ type Locket struct {
 
 type LocketRepo interface {
 	GetLocket(uint) (Locket, error)
-	ListUserLockets(uint, uint, uint) ([]Locket, error)
-	ListUserLocketsByUsername(string, uint, uint) ([]Locket, error)
+	ListLocketsByUserIdsTime(userIds []uint, startTime time.Time, limit uint) ([]Locket, error)
+	ListLatestLockets(userIds []uint, limit uint) ([]Locket, error)
+	ListUserLocketsByUsername(username string, limit uint) ([]Locket, error)
+	ListUserLocketsByUsernameTime(username string, startTime time.Time, limit uint) ([]Locket, error)
 }
 
 type LocketService interface {
-	GetLocket(uint) (Locket, error)
-	ListUserLocketsByUsername(username string, offset uint, limit uint) ([]Locket, error)
-	ListUserLockets(userId uint, offset uint, limit uint) ([]Locket, error)
+	ListLocketsByUserIdsTime(userIds []uint, startTime time.Time, limit uint) ([]Locket, error)
+	ListLatestLockets(userIds []uint, limit uint) ([]Locket, error)
+	ListUserLocketsByUsername(username string, limit uint) ([]Locket, error)
+	ListUserLocketsByUsernameTime(username string, startTime time.Time, limit uint) ([]Locket, error)
 }
 
 type locketService struct {
 	rp LocketRepo
 }
 
-func (s *locketService) GetLocket(id uint) (Locket, error) {
-	return s.rp.GetLocket(id)
+func (s *locketService) ListLocketsByUserIdsTime(userIds []uint, startTime time.Time, limit uint) ([]Locket, error) {
+	return s.rp.ListLocketsByUserIdsTime(userIds, startTime, limit)
 }
 
-func (s *locketService) ListUserLocketsByUsername(username string, offset uint, limit uint) ([]Locket, error) {
-	return s.rp.ListUserLocketsByUsername(username, offset, limit)
+func (s *locketService) ListLatestLockets(userIds []uint, limit uint) ([]Locket, error) {
+	return s.rp.ListLatestLockets(userIds, limit)
 }
 
-func (s *locketService) ListUserLockets(id uint, offset uint, limit uint) ([]Locket, error) {
-	return s.rp.ListUserLockets(id, offset, limit)
+func (s *locketService) ListUserLocketsByUsername(username string, limit uint) ([]Locket, error) {
+	return s.rp.ListUserLocketsByUsername(username, limit)
+}
+
+func (s *locketService) ListUserLocketsByUsernameTime(username string, startTime time.Time, limit uint) ([]Locket, error) {
+	return s.rp.ListUserLocketsByUsernameTime(username, startTime, limit)
 }
 
 func NewLocketService(rp LocketRepo) LocketService {
