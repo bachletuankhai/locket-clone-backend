@@ -3,60 +3,61 @@ package repository
 import (
 	"errors"
 	"locket-clone/backend/pkg/service/adding"
+	"locket-clone/backend/pkg/service/listing"
 	"time"
 
 	"gorm.io/gorm"
 )
 
-func (rp *LocketRepo) AddLocket(locket adding.LocketRecord) error {
+func (rp *LocketRepo) AddLocket(locket adding.LocketRecord) (listing.Locket, error) {
 	locketRecord := Locket{
 		Type:     locket.Type,
 		Model:    gorm.Model{},
 		ImageUrl: locket.ImageUrl,
 		Caption:  locket.Caption,
 	}
-	result := rp.db.Create(&locketRecord)
+	result := rp.Db.Create(&locketRecord)
 	if result.Error != nil {
-		return result.Error
+		return locketRecord.toListingLocket(), result.Error
 	}
-	return nil
+	return locketRecord.toListingLocket(), nil
 }
 
-func (rp *LocketRepo) GetLocket(id uint) (Locket, error) {
+func (rp *LocketRepo) GetLocket(id uint) (listing.Locket, error) {
 	locket := Locket{}
-	result := rp.db.First(&locket, id)
+	result := rp.Db.First(&locket, id)
 	if result.Error != nil {
-		return locket, errors.New("error fetching locket")
+		return listing.Locket{}, errors.New("error fetching locket")
 	}
-	return locket, nil
+	return locket.toListingLocket(), nil
 }
 
-func (rp *LocketRepo) ListLocketsByUserIdsTime(userIds []uint, startTime time.Time, limit uint) ([]Locket, error) {
+func (rp *LocketRepo) ListLocketsByUserIdsTime(userIds []uint, startTime time.Time, limit uint) ([]listing.Locket, error) {
 	if len(userIds) == 0 {
-		return []Locket{}, nil
+		return []listing.Locket{}, nil
 	}
-	var lockets []Locket
-	result := rp.db.Where("UserID IN ? AND CreateAt <= ?", userIds, startTime).Order("CreatedAt DESC").Limit(int(limit)).Find(&lockets)
+	var lockets []listing.Locket
+	result := rp.Db.Where("UserID IN ? AND CreateAt <= ?", userIds, startTime).Order("CreatedAt DESC").Limit(int(limit)).Find(&lockets)
+	if result.Error != nil {
+		return []listing.Locket{}, result.Error
+	}
+	return lockets, nil
+}
+
+func (rp *LocketRepo) ListLatestLockets(userIds []uint, limit uint) ([]listing.Locket, error) {
+	if len(userIds) == 0 {
+		return []listing.Locket{}, nil
+	}
+
+	var lockets []listing.Locket
+	result := rp.Db.Where("UserID IN ?", userIds).Order("CreatedAt DESC").Limit(int(limit)).Find(&lockets)
 	if result.Error != nil {
 		return lockets, result.Error
 	}
 	return lockets, nil
 }
 
-func (rp *LocketRepo) ListLatestLockets(userIds []uint, limit uint) ([]Locket, error) {
-	if len(userIds) == 0 {
-		return []Locket{}, nil
-	}
-
-	var lockets []Locket
-	result := rp.db.Where("UserID IN ?", userIds).Order("CreatedAt DESC").Limit(int(limit)).Find(&lockets)
-	if result.Error != nil {
-		return lockets, result.Error
-	}
-	return lockets, nil
-}
-
-func (rp *LocketRepo) ListUserLocketsByUsername(username string, limit uint) ([]Locket, error) {
+func (rp *LocketRepo) ListUserLocketsByUsername(username string, limit uint) ([]listing.Locket, error) {
 	var lockets []Locket
 	locket := Locket{
 		User: User{
@@ -65,14 +66,18 @@ func (rp *LocketRepo) ListUserLocketsByUsername(username string, limit uint) ([]
 			},
 		},
 	}
-	result := rp.db.Model(&locket).Order("CreatedAt DESC").Limit(int(limit)).Find(&lockets)
+	result := rp.Db.Model(&locket).Order("CreatedAt DESC").Limit(int(limit)).Find(&lockets)
 	if result.Error != nil {
-		return lockets, errors.New("error fetching locket")
+		return []listing.Locket{}, errors.New("error fetching locket")
 	}
-	return lockets, nil
+	locketList := make([]listing.Locket, len(lockets))
+	for i, l := range lockets {
+		locketList[i] = l.toListingLocket()
+	}
+	return locketList, nil
 }
 
-func (rp *LocketRepo) ListUserLocketsByUsernameTime(username string, startTime time.Time, limit uint) ([]Locket, error) {
+func (rp *LocketRepo) ListUserLocketsByUsernameTime(username string, startTime time.Time, limit uint) ([]listing.Locket, error) {
 	var lockets []Locket
 	locket := Locket{
 		User: User{
@@ -81,9 +86,13 @@ func (rp *LocketRepo) ListUserLocketsByUsernameTime(username string, startTime t
 			},
 		},
 	}
-	result := rp.db.Model(&locket).Order("CreatedAt DESC").Where("CreatedAt <= ?", startTime).Limit(int(limit)).Find(&lockets)
+	result := rp.Db.Model(&locket).Order("CreatedAt DESC").Where("CreatedAt <= ?", startTime).Limit(int(limit)).Find(&lockets)
 	if result.Error != nil {
-		return lockets, errors.New("error fetching locket")
+		return []listing.Locket{}, errors.New("error fetching locket")
 	}
-	return lockets, nil
+	locketList := make([]listing.Locket, len(lockets))
+	for i, l := range lockets {
+		locketList[i] = l.toListingLocket()
+	}
+	return locketList, nil
 }

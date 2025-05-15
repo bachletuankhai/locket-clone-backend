@@ -13,7 +13,7 @@ func (rp *UserRepo) AddUser(user adding.UserRecord) error {
 		UserRecord: user,
 		Friends:    []User{},
 	}
-	result := rp.db.Create(&userRecord)
+	result := rp.Db.Create(&userRecord)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -26,7 +26,7 @@ func (rp *UserRepo) GetUserByUsername(username string) (listing.User, error) {
 			Username: username,
 		},
 	}
-	result := rp.db.First(&user)
+	result := rp.Db.First(&user)
 	if result.Error != nil {
 		return listing.User{}, result.Error
 	}
@@ -39,7 +39,7 @@ func (rp *UserRepo) GetUserByEmail(email string) (listing.User, error) {
 			Email: email,
 		},
 	}
-	result := rp.db.First(&user)
+	result := rp.Db.First(&user)
 	if result.Error != nil {
 		return listing.User{}, result.Error
 	}

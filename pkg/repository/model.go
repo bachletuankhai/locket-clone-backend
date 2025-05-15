@@ -10,14 +10,14 @@ import (
 )
 
 type LocketRepo struct {
-	db *gorm.DB
+	Db *gorm.DB
 }
 
 type Locket struct {
 	gorm.Model
 	ID        uint      `gorm:"primaryKey"`
 	CreatedAt time.Time `gorm:"index:,sort:desc,type:btree"`
-	DeleteAt  time.Time `gorm:"index"`
+	DeletedAt time.Time `gorm:"index"`
 	Type      model.LocketType
 	ImageUrl  string
 	Caption   string
@@ -25,8 +25,19 @@ type Locket struct {
 	User      User `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
+func (l *Locket) toListingLocket() listing.Locket {
+	return listing.Locket{
+		Locket: model.Locket{
+			ID:       l.ID,
+			Type:     l.Type,
+			ImageUrl: l.ImageUrl,
+			Caption:  l.Caption,
+		},
+	}
+}
+
 type UserRepo struct {
-	db *gorm.DB
+	Db *gorm.DB
 }
 
 type User struct {

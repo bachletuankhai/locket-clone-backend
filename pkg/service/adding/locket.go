@@ -1,12 +1,15 @@
 package adding
 
-import "locket-clone/backend/pkg/model"
+import (
+	"locket-clone/backend/pkg/model"
+	"locket-clone/backend/pkg/service/listing"
+)
 
 type LocketPayload struct {
-	Type     model.LocketType `json:"type"`
-	Image    []byte           `json:"-"`
-	Caption  string           `json:"caption"`
-	Username string           `json:"username"`
+	Type     model.LocketType `json:"type" form:"type" binding:"required"`
+	Image    []byte           `json:"-" form:"image" binding:"required"`
+	Caption  string           `json:"caption" form:"caption" binding:"required"`
+	Username string           `json:"username" form:"-" binding:"-"`
 }
 
 type LocketRecord struct {
@@ -29,11 +32,11 @@ type ImageBlobStorage interface {
 }
 
 type LocketService interface {
-	AddLocket(LocketPayload) error
+	AddLocket(LocketPayload) (listing.Locket, error)
 }
 
 type LocketRepo interface {
-	AddLocket(LocketRecord) error
+	AddLocket(LocketRecord) (listing.Locket, error)
 }
 
 type locketService struct {
@@ -50,15 +53,15 @@ func (l *LocketPayload) Validate() error {
 	return &InvalidPayloadError{message: "invalid locket type"}
 }
 
-func (s *locketService) AddLocket(locket LocketPayload) error {
+func (s *locketService) AddLocket(locket LocketPayload) (listing.Locket, error) {
 	err := locket.Validate()
 	if err != nil {
-		return err
+		return listing.Locket{}, err
 	}
 
 	url, err := s.blobStorage.UploadFile(locket.Image, string(locket.Type))
 	if err != nil {
-		return err
+		return listing.Locket{}, err
 	}
 	return s.rp.AddLocket(LocketRecord{
 		Type:     locket.Type,

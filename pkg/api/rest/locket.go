@@ -1,8 +1,11 @@
 package rest
 
 import (
+	"io"
+	"locket-clone/backend/pkg/model"
 	"locket-clone/backend/pkg/service/adding"
 	"locket-clone/backend/pkg/service/listing"
+	"mime/multipart"
 	"slices"
 	"strconv"
 	"time"
@@ -86,14 +89,15 @@ func (controller *LocketController) RegisterLocketHandler(group *gin.RouterGroup
 
 		var startTime time.Time
 		if isStartTimePresent {
-			startTimeUnix, err := strconv.ParseInt(startTimeString, 10, 64)
-			if err != nil {
+			startTimeUnix, err2 := strconv.ParseInt(startTimeString, 10, 64)
+			if err2 != nil {
 				ctx.JSON(400, gin.H{"error": "Invalid start time"})
 				return
 			}
 			startTime = time.Unix(startTimeUnix, 0)
 
 			lockets, err = controller.locketListingService.ListUserLocketsByUsernameTime(username, startTime, DEFAULT_LOCKET_LIMIT)
+
 		} else {
 			lockets, err = controller.locketListingService.ListUserLocketsByUsername(username, DEFAULT_LOCKET_LIMIT)
 		}
@@ -104,6 +108,56 @@ func (controller *LocketController) RegisterLocketHandler(group *gin.RouterGroup
 		ctx.JSON(200, gin.H{
 			"data": lockets,
 		})
+	})
+
+	group.POST("/", AuthMiddleware, func(ctx *gin.Context) {
+		username := ctx.GetHeader(AUTH_MIDDLEWARE_USERNAME_HEADER)
+
+		type LocketPayload struct {
+			Image   *multipart.FileHeader `json:"-" form:"image" binding:"required"`
+			Caption string                `json:"caption" form:"caption" binding:"required"`
+		}
+
+		locket := LocketPayload{}
+		if err := ctx.ShouldBind(&locket); err != nil {
+			ctx.JSON(400, gin.H{"error": "Invalid request payload"})
+			return
+		}
+
+		fileType := locket.Image.Header.Get("Content-Type")
+		if len(fileType) == 0 {
+			ctx.JSON(400, gin.H{"error": "Invalid file type"})
+			return
+		}
+
+		imageData, err := locket.Image.Open()
+		if err != nil {
+			ctx.JSON(500, gin.H{"error": "Cannot process image"})
+			return
+		}
+		defer imageData.Close()
+
+		imageBytes, err := io.ReadAll(imageData)
+		if err != nil {
+			ctx.JSON(500, gin.H{"error": "Cannot process image"})
+			return
+		}
+
+		payload := adding.LocketPayload{
+			Type:     model.LocketType(fileType),
+			Image:    imageBytes,
+			Caption:  locket.Caption,
+			Username: username,
+		}
+		if locket, err := controller.locketAddingService.AddLocket(payload); err != nil {
+			ctx.JSON(500, gin.H{"error": "Error adding locket"})
+			return
+		} else {
+			ctx.JSON(200, gin.H{
+				"data": locket,
+			})
+			return
+		}
 	})
 
 }
