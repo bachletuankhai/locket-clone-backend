@@ -8,27 +8,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const AUTH_MIDDLEWARE_USERNAME_HEADER = "x-locket-username"
+const AUTH_MIDDLEWARE_USERNAME_KEY = "x-locket-username"
 
-func AuthMiddleware(ctx *gin.Context) {
-	bearerToken := ctx.GetHeader("Authorization")
-	if len(bearerToken) == 0 {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
-		return
+func NewAuthMiddleware(authService auth.AuthService) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		bearerToken := ctx.GetHeader("Authorization")
+		if len(bearerToken) == 0 {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		reqToken := strings.Split(bearerToken, " ")[1]
+		if len(reqToken) == 0 {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		claims, err := authService.ParseToken(reqToken)
+		if err != nil {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		ctx.Set(AUTH_MIDDLEWARE_USERNAME_KEY, claims.Username)
+		ctx.Next()
 	}
-
-	reqToken := strings.Split(bearerToken, " ")[1]
-	if len(reqToken) == 0 {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
-
-	claims, err := auth.ParseToken(reqToken)
-	if err != nil {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
-
-	ctx.Request.Header.Set(AUTH_MIDDLEWARE_USERNAME_HEADER, claims.Username)
-	ctx.Next()
 }

@@ -5,7 +5,7 @@ import "locket-clone/backend/pkg/service/auth"
 type UserPayload struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
-	Password string `json:"-"`
+	Password string `json:"password"`
 	Username string `json:"username"`
 }
 

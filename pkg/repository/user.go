@@ -45,3 +45,16 @@ func (rp *UserRepo) GetUserByEmail(email string) (listing.User, error) {
 	}
 	return user.toListingUser(), nil
 }
+
+func (rp *UserRepo) GetUserPasswordHashByUsername(username string) (string, error) {
+	user := User{
+		UserRecord: adding.UserRecord{
+			Username: username,
+		},
+	}
+	result := rp.Db.First(&user)
+	if result.Error != nil {
+		return "", result.Error
+	}
+	return user.PasswordHash, nil
+}

@@ -3,6 +3,7 @@ package rest
 import (
 	"locket-clone/backend/pkg/repository"
 	"locket-clone/backend/pkg/service/adding"
+	"locket-clone/backend/pkg/service/auth"
 	"locket-clone/backend/pkg/service/listing"
 	"os"
 
@@ -30,22 +31,44 @@ func Init() {
 	userRepo := repository.UserRepo{
 		Db: db,
 	}
+	tokenRepo := repository.NewMemTokenRepo()
 
 	// Initialize the services
 	locketAddingService := adding.NewLocketService(&locketRepo, &storage)
 	locketListingService := listing.NewLocketService(&locketRepo)
 	userListingService := listing.NewUserService(&userRepo)
+	userAddingService := adding.NewUserService(&userRepo)
+	authService := auth.NewAuthService(tokenRepo, &userRepo)
 
 	// Initialize the LocketController
-	locketController := &LocketController{
-		locketAddingService:  locketAddingService,  // Replace nil with actual LocketRepo
-		locketListingService: locketListingService, // Replace nil with actual LocketRepo
-		userListingService:   userListingService,   // Replace nil with actual UserRepo
+	locketController := LocketController{
+		locketAddingService:  locketAddingService,
+		locketListingService: locketListingService,
+		userListingService:   userListingService,
+	}
+
+	userController := UserController{
+		UserAddingService: userAddingService,
+		AuthService:       authService,
 	}
 
 	router := gin.Default()
 	locketGroup := router.Group("/locket")
-	locketController.RegisterLocketHandler(locketGroup)
+
+	authMiddleware := NewAuthMiddleware(authService)
+
+	locketGroup.Use(authMiddleware)
+	{
+		locketGroup.GET("/feed", locketController.GetFeed)
+		locketGroup.GET("/user/:username", locketController.GetUserLockets)
+		locketGroup.POST("/", locketController.AddLocket)
+	}
+
+	authGroup := router.Group("/auth")
+	{
+		authGroup.POST("/login", userController.Login)
+		authGroup.POST("/register", userController.RegisterUser)
+	}
 
 	router.Run()
 }

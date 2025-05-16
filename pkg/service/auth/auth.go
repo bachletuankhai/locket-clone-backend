@@ -24,22 +24,6 @@ type JwtClaims struct {
 	jwt.RegisteredClaims
 }
 
-func ParseToken(token string) (JwtClaims, error) {
-	claims := JwtClaims{}
-
-	res, err := jwt.ParseWithClaims(token, &claims, func(t *jwt.Token) (interface{}, error) {
-		return os.ReadFile("./public.key")
-	}, jwt.WithValidMethods([]string{"RS256", "RS384", "RS512"}))
-	if err != nil {
-		return claims, err
-	}
-
-	if res.Valid {
-		return claims, nil
-	}
-	return claims, errors.New("Unauthorized")
-}
-
 func GenerateToken(username string) (string, error) {
 	claims := JwtClaims{
 		Username: username,
@@ -99,11 +83,12 @@ type AuthService interface {
 	Login(username, password string) (Token, error)
 	// RefreshToken(token string) (Token, error)  // TODO: Implement refresh token
 	Logout(token string) error
+	ParseToken(token string) (JwtClaims, error)
 }
 
 type TokenRepo interface {
 	SaveToken(token string, exp time.Time) error
-	CheckToken(token string) (bool, error)
+	CheckTokenExists(token string) (bool, error)
 }
 
 type UserRepo interface {
@@ -111,8 +96,33 @@ type UserRepo interface {
 }
 
 type authService struct {
-	TokenRepo TokenRepo
-	UserRepo  UserRepo
+	TokenBlacklist TokenRepo
+	UserRepo       UserRepo
+}
+
+func (s *authService) ParseToken(token string) (JwtClaims, error) {
+	if token == "" {
+		return JwtClaims{}, errors.New("token is empty")
+	}
+	if isBlacklisted, err := s.TokenBlacklist.CheckTokenExists(token); err != nil {
+		return JwtClaims{}, errors.New("cannot validate token")
+	} else if isBlacklisted {
+		return JwtClaims{}, errors.New("token is blacklisted")
+	}
+
+	claims := JwtClaims{}
+
+	res, err := jwt.ParseWithClaims(token, &claims, func(t *jwt.Token) (interface{}, error) {
+		return os.ReadFile("./public.key")
+	}, jwt.WithValidMethods([]string{"RS256", "RS384", "RS512"}))
+	if err != nil {
+		return claims, err
+	}
+
+	if res.Valid {
+		return claims, nil
+	}
+	return claims, errors.New("Unauthorized")
 }
 
 func (s *authService) Login(username string, password string) (Token, error) {
@@ -121,7 +131,7 @@ func (s *authService) Login(username string, password string) (Token, error) {
 		return Token{}, err
 	}
 	if !CompareHashPassword(password, hash) {
-		return Token{}, errors.New("Invalid password")
+		return Token{}, errors.New("invalid password")
 	}
 
 	token, err := GenerateToken(username)
@@ -143,5 +153,20 @@ func (s *authService) Login(username string, password string) (Token, error) {
 
 // RefreshToken(token string) (Token, error)  // TODO: Implement refresh token
 func (s *authService) Logout(token string) error {
-	panic("not implemented") // TODO: Implement
+	claims, err := s.ParseToken(token)
+	if err != nil {
+		return err
+	}
+
+	if err := s.TokenBlacklist.SaveToken(token, claims.ExpiresAt.Time); err != nil {
+		return err
+	}
+	return nil
+}
+
+func NewAuthService(tokenBlacklist TokenRepo, userRepo UserRepo) AuthService {
+	return &authService{
+		TokenBlacklist: tokenBlacklist,
+		UserRepo:       userRepo,
+	}
 }
